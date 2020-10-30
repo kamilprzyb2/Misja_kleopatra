@@ -48,8 +48,6 @@ public class PlayerController : MonoBehaviour
             ableToDoubleJump = false;
         }
 
-
         controller.Move(direction * Time.deltaTime);
-
     }
 }
