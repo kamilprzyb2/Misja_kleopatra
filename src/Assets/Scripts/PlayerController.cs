@@ -9,6 +9,8 @@ public class PlayerController : MonoBehaviour
     public LayerMask groundLayer;
     
     public float speed = 8f;
+    [Range(0, 1)] public float acceleration = 0.1f;
+
     public float gravity = 25f;
     public float jumpForce = 10f;
     public bool enableDoubleJump = true;
@@ -16,20 +18,26 @@ public class PlayerController : MonoBehaviour
 
     private Vector3 direction;
     private bool ableToDoubleJump = true;
+    private float currentAccelaration = 0f;
 
-
-    // Start is called before the first frame update
     void Start()
     {
         if (!enableDoubleJump)
             ableToDoubleJump = false;
     }
 
-    // Update is called once per frame
     void Update()
     {
         float horizontalInput = Input.GetAxis("Horizontal");
-        direction.x = horizontalInput * speed;
+        {
+            currentAccelaration += acceleration * Time.deltaTime;
+            if (currentAccelaration > 1)
+                currentAccelaration = 1;
+
+            direction.x = horizontalInput * speed * currentAccelaration;
+        }
+        if (horizontalInput == 0)
+            currentAccelaration = 0;
 
         direction.y -= gravity * Time.deltaTime;
 
