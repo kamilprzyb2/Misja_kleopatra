@@ -6,6 +6,7 @@ public class PlayerController : MonoBehaviour
 {
     public CharacterController controller;
     public Transform groundCheck;
+    public Transform wallCheck;
     public LayerMask groundLayer;
     
     public float speed = 8f;
@@ -15,10 +16,18 @@ public class PlayerController : MonoBehaviour
     public float jumpForce = 10f;
     public bool enableDoubleJump = true;
     public float secondJumpForce = 10f;
+    [Range(0,1)] public float wallSlideSlowDown = 0.5f;
+    public float wallJumpXForce = 10f;
+    public float wallJumpYForce = 10f;
+    public float wallJumpTime = 2f;
 
-    private Vector3 direction;
     private bool ableToDoubleJump = true;
+    private Vector3 direction;
     private float currentAccelaration = 0f;
+    private bool isGrounded;
+    private bool isSliding;
+    private bool wallJump = false;
+    private bool wallJumpDirection;
 
     void Start()
     {
@@ -28,20 +37,32 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        float horizontalInput = Input.GetAxis("Horizontal");
+        if (wallJump)
         {
-            currentAccelaration += acceleration * Time.deltaTime;
-            if (currentAccelaration > 1)
-                currentAccelaration = 1;
-
+            direction.y = wallJumpYForce;
+            direction.x = wallJumpDirection ? wallJumpXForce : -wallJumpXForce;
+        }
+        else
+        {
+            float horizontalInput = Input.GetAxis("Horizontal");
+            if (horizontalInput != 0)
+            {
+                currentAccelaration += acceleration * Time.deltaTime;
+                if (currentAccelaration > 1)
+                    currentAccelaration = 1;
+            }
+            else
+            {
+                currentAccelaration = 0;
+            }
             direction.x = horizontalInput * speed * currentAccelaration;
         }
-        if (horizontalInput == 0)
-            currentAccelaration = 0;
+
 
         direction.y -= gravity * Time.deltaTime;
-
-        bool isGrounded = Physics.CheckSphere(groundCheck.position, 0.2f, groundLayer);
+        isGrounded = Physics.CheckSphere(groundCheck.position, 0.2f, groundLayer);
+        bool isFacingWall = Physics.CheckSphere(wallCheck.position, 1.3f, groundLayer);
+        isSliding = isFacingWall && direction.y < 0 && !wallJump; 
 
         if (isGrounded)
         {
@@ -50,12 +71,36 @@ public class PlayerController : MonoBehaviour
             else if (!ableToDoubleJump && enableDoubleJump)
                 ableToDoubleJump = true;
         }
-        else if (Input.GetButtonDown("Jump") && ableToDoubleJump)
+        else
         {
-            direction.y = secondJumpForce;
-            ableToDoubleJump = false;
+            if (isSliding)
+            {
+                if (Input.GetButtonDown("Jump"))
+                {
+                    wallJump = true;
+                    wallJumpDirection = direction.x < 0;
+                    Invoke("endWallJump", wallJumpTime);
+                }
+                else
+                    direction.y += gravity * Time.deltaTime * wallSlideSlowDown;
+            }
+
+            else if (Input.GetButtonDown("Jump") && !isFacingWall && ableToDoubleJump)
+            {
+                direction.y = secondJumpForce;
+                ableToDoubleJump = false;
+            }
         }
 
+
+
         controller.Move(direction * Time.deltaTime);
+        Debug.Log(direction.x);
     }
+
+    void endWallJump()
+    {
+        wallJump = false;
+    }
+
 }
